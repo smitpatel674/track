@@ -42,9 +42,11 @@ const server = http.createServer(async (req, res) => {
   }
 
   try {
-    const data = await trackShipment(trackingNo);
-    sendJson(res, 200, {
-      ok: true,
+    const data = await trackShipment(trackingNo, {
+      debug: url.searchParams.get('debug') === '1'
+    });
+    sendJson(res, data.found ? 200 : 404, {
+      ok: data.found,
       trackingNo,
       data
     });

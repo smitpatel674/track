@@ -1,9 +1,10 @@
 import { chromium } from 'playwright';
 import { fileURLToPath } from 'node:url';
 
-export async function trackShipment(trackingNo) {
+export async function trackShipment(trackingNo, options = {}) {
   const headless = process.env.HEADLESS !== 'false';
   const useSystemChrome = process.env.USE_SYSTEM_CHROME === '1';
+  const debug = options.debug || process.env.SCRAPER_DEBUG === '1';
 
   const browser = await chromium.launch({
     headless,
@@ -49,10 +50,11 @@ export async function trackShipment(trackingNo) {
 
     await page.waitForTimeout(5000);
 
-    return await page.evaluate(() => {
+    const result = await page.evaluate((includeDebug) => {
       const text = document.body.innerText;
-
-      return {
+      const noResults = /No results found/i.test(text);
+      const data = {
+        found: !noResults,
         billOfLading: text.match(/Bill of Lading number\s+(\d+)/)?.[1] || null,
         from: text.match(/From\s+([A-Z]+)/)?.[1] || null,
         to: text.match(/To\s+([A-Z]+)/)?.[1] || null,
@@ -62,9 +64,27 @@ export async function trackShipment(trackingNo) {
           text.match(/Estimated arrival date\s+([\s\S]*?)Latest event/)?.[1]?.trim() ||
           null,
         latestEvent: text.match(/Latest event\s+([^\n]+)/)?.[1] || null,
-        lastUpdated: text.match(/Last updated:\s*([^\n]+)/)?.[1] || null
+        lastUpdated: text.match(/Last updated:\s*([^\n]+)/)?.[1] || null,
+        message: noResults
+          ? "Maersk returned no public tracking results for this reference."
+          : null
       };
-    });
+
+      if (!includeDebug) {
+        return data;
+      }
+
+      return {
+        ...data,
+        debug: {
+          title: document.title,
+          url: location.href,
+          textSample: text.replace(/\s+/g, ' ').trim().slice(0, 2500)
+        }
+      };
+    }, debug);
+
+    return result;
   } finally {
     await browser.close();
   }
