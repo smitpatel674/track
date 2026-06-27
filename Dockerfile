@@ -7,9 +7,9 @@ RUN npm ci
 
 COPY tracking.js server.js ./
 
-ENV HEADLESS=true
+ENV HEADLESS=false
 ENV PORT=3000
 
 EXPOSE 3000
 
-CMD ["node", "server.js"]
+CMD ["xvfb-run", "--auto-servernum", "--server-args=-screen 0 1440x1000x24", "node", "server.js"]

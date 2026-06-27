@@ -5,4 +5,4 @@ services:
     dockerfilePath: ./Dockerfile
     envVars:
       - key: HEADLESS
-        value: "true"
+        value: "false"

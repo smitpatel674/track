@@ -40,11 +40,19 @@ export async function trackShipment(trackingNo, options = {}) {
       console.error('Cookie popup not found');
     }
 
+    await page.getByRole('textbox').first().fill(trackingNo);
+    await page.getByRole('button', { name: /^track$/i }).click();
+
     await page.waitForFunction(
-      () => {
+      (expectedTrackingNo) => {
         const text = document.body.innerText;
-        return text.includes('Bill of Lading number') || text.includes('No results found');
+        return (
+          text.includes(`Bill of Lading number\n${expectedTrackingNo}`) ||
+          text.includes(`Bill of Lading number ${expectedTrackingNo}`) ||
+          text.includes("We couldn't find any Bills of Lading or containers")
+        );
       },
+      trackingNo,
       { timeout: 60000 }
     );
 
@@ -53,6 +61,15 @@ export async function trackShipment(trackingNo, options = {}) {
     const result = await page.evaluate((includeDebug) => {
       const text = document.body.innerText;
       const noResults = /No results found/i.test(text);
+      const latestEvent =
+        text.match(/Latest event\s+([^\n]+)/)?.[1] ||
+        text.match(/Last updated:\s*[^\n]+\s+([^.\n]+?•[^\n]+?)\s+Note:/)?.[1]?.trim() ||
+        null;
+      const eta =
+        text.match(/Estimated arrival date\s+([\s\S]*?)Latest event/)?.[1]?.trim() ||
+        [...text.matchAll(/Vessel arrival[^\n]*?\s+(\d{2}\s+[A-Z][a-z]{2}\s+\d{4}\s+\d{2}:\d{2})/g)]
+          .at(-1)?.[1] ||
+        null;
       const data = {
         found: !noResults,
         billOfLading: text.match(/Bill of Lading number\s+(\d+)/)?.[1] || null,
@@ -60,10 +77,8 @@ export async function trackShipment(trackingNo, options = {}) {
         to: text.match(/To\s+([A-Z]+)/)?.[1] || null,
         container: text.match(/([A-Z]{4}\d{7})\s+\|\s+([^\n]+)/)?.[1] || null,
         containerType: text.match(/[A-Z]{4}\d{7}\s+\|\s+([^\n]+)/)?.[1] || null,
-        eta:
-          text.match(/Estimated arrival date\s+([\s\S]*?)Latest event/)?.[1]?.trim() ||
-          null,
-        latestEvent: text.match(/Latest event\s+([^\n]+)/)?.[1] || null,
+        eta,
+        latestEvent,
         lastUpdated: text.match(/Last updated:\s*([^\n]+)/)?.[1] || null,
         message: noResults
           ? "Maersk returned no public tracking results for this reference."
