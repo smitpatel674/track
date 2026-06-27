@@ -1,0 +1,13 @@
+{
+  "name": "mersk",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node tracking.js",
+    "track": "node tracking.js"
+  },
+  "dependencies": {
+    "playwright": "^1.61.1"
+  }
+}
