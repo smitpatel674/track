@@ -5,11 +5,12 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 
-COPY tracking.js server.js ./
+COPY tracking.js server.js start.sh ./
+RUN chmod +x start.sh
 
 ENV HEADLESS=false
 ENV PORT=3000
 
 EXPOSE 3000
 
-CMD ["xvfb-run", "--auto-servernum", "--server-args=-screen 0 1440x1000x24", "node", "server.js"]
+CMD ["./start.sh"]
