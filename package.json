@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "node tracking.js",
+    "start": "node server.js",
+    "cli": "node tracking.js",
     "track": "node tracking.js"
   },
   "dependencies": {
